@@ -5,7 +5,7 @@ import Header from './Header';
 import LottieView from 'lottie-react-native';
 
 
-const LogIn = ({ onLoginStatus, onUserName, onUserMatricule, onLoginDate}) => {
+const LogIn = ({ onLoginStatus, onUserName, onUserMatricule, onLoginDate }) => {
 
     const [matricule, setMatricule] = useState(false);
     const [verification, setVerification] = useState(null);
@@ -71,7 +71,7 @@ const LogIn = ({ onLoginStatus, onUserName, onUserMatricule, onLoginDate}) => {
                     //secureTextEntry={true}
                     keyboardType="numeric"
                     placeholder="  "
-                    style={styles.input}
+                    style={[styles.input, { fontSize: 40 }]}
                 />
                 {verification === 'do_not_exist' && (
                     <Text style={styles.error}>المعرف غير موجود</Text>
@@ -96,15 +96,16 @@ const styles = StyleSheet.create({
 
     },
     label: {
-        fontSize: 18,
+        fontSize: 20,
         marginBottom: 8,
-        color: '#000'
+        color: '#000',
+        fontWeight: 'bold' ,
     },
     input: {
-        height: 40,
+        height: '20%',
         width: '100%',
         borderColor: 'gray',
-        borderWidth: 1,
+        borderWidth: 2,
         marginBottom: 16,
         paddingHorizontal: 8,
     },

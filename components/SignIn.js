@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View, TextInput, Button, Alert, StyleSheet, Keyboard, ScrollView, TouchableOpacity } from 'react-native';
+import { Text, View, TextInput, Button, Alert, StyleSheet, Pressable, Keyboard, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import SQLite from 'react-native-sqlite-storage';
 import RNPrint from 'react-native-print';
 import Header from './Header';
 import LogIn from './LogIn';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faRightFromBracket } from '@fortawesome/free-solid-svg-icons/faRightFromBracket';
-import LottieView from 'lottie-react-native';
-import axios from 'axios';
+import { faPrint } from '@fortawesome/free-solid-svg-icons/faPrint';
+//import LottieView from 'lottie-react-native';
 import NetInfo from '@react-native-community/netinfo';
 import * as permissions from 'react-native-permissions';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook
-
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import utf8 from 'utf8';
+import Logo from '../images/logoicon.png';
 
 
 
@@ -27,6 +28,10 @@ const SignIn = () => {
     const [userMatricule, setUserMatricule] = useState('');
     const [Login, setLogin] = useState('');
     const [showButton, setShowButton] = useState(true); // State variable to control button visibility
+    const [selectedButtonIndex, setSelectedButtonIndex] = useState(-1);
+    const [isButtonPressed, setIsButtonPressed] = useState(false);
+    const [selectedButtonPrice, setSelectedButtonPrice] = useState(null); // No default price
+    const [totalPrice, setTotalPrice] = useState(0);
 
 
     // Update the user's name when logging in
@@ -44,11 +49,10 @@ const SignIn = () => {
 
 
 
-
-
     // Update the isLoggedIn state based on the login status
     const handleLoginStatus = (status) => {
         setIsLoggedIn(status);
+        setTotalPrice(0); // Reset totalPrice to zero
     };
 
     // Get the initial counter value based on the current year
@@ -62,13 +66,16 @@ const SignIn = () => {
         return netInfo.isConnected;
     };
 
-    const navigation = useNavigation();
 
-    const handleRegisterNewTaxi = () => {
-        setInputCode('');
-        navigation.navigate('NewTaxi'); // Navigate to the new page
-    };
+    useEffect(() => {
+        // Check for stored state when the app starts
+        restoreAppState();
+    }, []);
 
+    useEffect(() => {
+        // Save app state whenever it changes
+        saveAppState();
+    }, [isLoggedIn, printedTickets, totalPrice, Login, userName, userMatricule]);
 
     // Database connection
     const db = SQLite.openDatabase(
@@ -83,51 +90,111 @@ const SignIn = () => {
         (error) => console.log('Database error', error)
     );
 
+    const saveAppState = async () => {
+        try {
+            await AsyncStorage.setItem('isLoggedIn', isLoggedIn.toString()); // Assuming isLoggedIn is a boolean
+            await AsyncStorage.setItem('printedTickets', printedTickets.toString()); // Assuming printedTickets is a number
+            await AsyncStorage.setItem('totalPrice', totalPrice.toString()); // Assuming totalPrice is a number
+            await AsyncStorage.setItem('Login', Login); // Assuming Login is a string
+            await AsyncStorage.setItem('userName', userName); // Assuming userName is a string
+            await AsyncStorage.setItem('userMatricule', userMatricule); // Assuming userMatricule is a string
+
+        } catch (error) {
+            console.error('Error saving app state:', error);
+        }
+    };
+
+    const restoreAppState = async () => {
+        try {
+            // Restore app state from AsyncStorage
+            const storedIsLoggedIn = await AsyncStorage.getItem('isLoggedIn');
+            const storedPrintedTickets = await AsyncStorage.getItem('printedTickets');
+            const storedtotalPrice = await AsyncStorage.getItem('totalPrice');
+            const storedLogin = await AsyncStorage.getItem('Login');
+            const storedName = await AsyncStorage.getItem('userName');
+            const storedMatricule = await AsyncStorage.getItem('userMatricule');
+
+            // Convert stored values to their original types
+            setIsLoggedIn(storedIsLoggedIn === 'true');
+            setPrintedTickets(parseInt(storedPrintedTickets, 10));
+            setTotalPrice(parseInt(storedtotalPrice, 10));
+            setLogin(storedLogin);
+            setUserName(storedName);
+            setUserMatricule(storedMatricule);
+
+        } catch (error) {
+            console.error('Error restoring app state:', error);
+        }
+    };
+
 
     const handleLogout = () => {
-        const totalPrice = printedTickets * 50; // Calculate the total price
+        const totalPrice = printedTickets * 500;
+        //DT= dernier ticket 
+        const DT = counter - 1 ;
+        //PT= premier ticket
+        const PT = counter - printedTickets;
         const printContent = `<html>
         <head>
         
         </head>
         <body>
-        <table width=100% style="font-size: 20px;font-weight: bold;" >
+        <table width=100% style="font-size: 18px;font-weight: bold;" >
         <thead>
-        <tr style="white-space: nowrap;font-size: 15px;">
+        <tr>
+        <td colspan="2">
+            <img src="${Logo}" alt=" ">
+        </td>
+    </tr>
+        
+        <tr>
+            <th colspan="2" style="font-size: 18px;">المؤسسة العمومية الاقتصادية لنقل المسافرين بالشرق</th>
+        </tr>
+        <tr>
+            <th colspan="2" style="font-size: 18px;">مركز الفحص التقني سطيف</th>
+        </tr>
+        <tr>
+            <th colspan="2" style="font-size: 18px;">FIN DE SERVICE</th>
+        </tr>   
+        <tr style="white-space: nowrap;font-size: 18px;">
             <td>${actualDate}</td>
         </tr>
-        <tr>
-            <th colspan="2" style="font-size: 20px;">المؤسسة العمومية الاقتصادية لنقل المسافرين بالشرق</th>
-        </tr>
-        <tr>
-            <th colspan="2" style="font-size: 20px;">حقوق الدخول لسيارات الاجرة</th>
-        </tr>   
         </thead>
         <tbody>
-        <tr style="font-size: 20px;">  
+        <tr style="font-size: 18px;">  
+        <td> H.D.S :</td>
         <td>${Login} </td>
-        <td>: بداية العمل</td>
-       </tr>
-       <tr style="font-size: 20px;">  
+       </tr> 
+       <tr style="font-size: 18px;"> 
+       <td> Cloturé :</td> 
        <td>${currentTime} </td>
-       <td>: نهاية العمل</td>
+
        </tr>
-        <tr style="white-space: nowrap;font-size: 20px;">
-            <td>${totalPrice} د.ج </td>
-            <td>: الثمن الجملي</td>
+       <tr style="font-size: 18px;"> 
+       <td> Nb : </td> 
+           <td>${printedTickets} </td>
+       </tr>
+        <tr style="white-space: nowrap;font-size: 18px;">
+         <td> Prix total : </td>
         </tr>
-        <tr style="font-size: 20px;">  
-            <td>${printedTickets} </td>
-            <td>: عدد التذاكر</td>
-        </tr>
-        <tr style="font-size: 20px;">  
+        <tr style="white-space: nowrap; font-size: 18px; text-align: center;">
+        <td colspan="2">${totalPrice}.00 D.A</td>
+    </tr>
+    <tr style="white-space: nowrap;font-size: 18px;">
+    <th colspan="2">Premier ticket:  ${PT}</th>
+</tr>
+    <tr style="white-space: nowrap;font-size: 18px;">
+    <th colspan="2">Dernier ticket:  ${DT}</th>
+</tr>
+       
+       <!-- <tr style="font-size: 18px;"> 
+        <td> Nom : </td> 
             <td>${userName} </td>
-            <td>: القابض</td>
         </tr>
-<tr style="font-size: 20px;">    
+<tr style="font-size: 18px;">   
+<td> Matricule : </td> 
             <td>${userMatricule}</td>
-            <td>: رقم التسجيل</td>
-        </tr>
+        </tr> --> 
         </tbody>
        </table>
         </body>
@@ -143,7 +210,7 @@ const SignIn = () => {
                     setPrintedTickets(0); // Reset printedTickets count
                     setIsLoggedIn(false);
                     saveEntry2ToDatabase(userName, userMatricule, currentTime, actualDate, totalPrice);
-
+                    setSelectedButtonIndex(-1); // Reset selectedButtonIndex to indicate no button is selected
                 },
             },
             {
@@ -309,88 +376,22 @@ const SignIn = () => {
         });
     };
 
-
-
-
-    //verifier le code entré avec la BD 
-    const verifyCode = () => {
+    const insertCodeIntoTable = () => {
         db.transaction((tx) => {
             tx.executeSql(
-                'SELECT * FROM today WHERE code = ? AND entryDate = ?',
-                [inputCode, actualDate],
-                (_, result) => {
-                    if (result.rows.length > 0) {
-                        Alert.alert('لا يمكن إدخال نفس الرقم مرتين في اليوم ');
-                    } else {
-                        tx.executeSql(
-                            'SELECT * FROM code WHERE code = ?',
-                            [inputCode],
-                            (_, result) => {
-                                if (result.rows.length > 0) {
-                                    setVerificationResult('matched'); // Code exists
-                                    setLastEntryDate(actualDate);
-                                    saveEntryToDatabase(inputCode, currentTime, actualDate);
-                                    setShowButton(false); // Hide the button if the code exists
-                                } else {
-                                    //setVerificationResult('not_matched'); // Code does not exist
-                                    Alert.alert('رقم الطاكسي غير موجود', '', [
-                                        {
-                                            text: 'الغاء',
-                                            onPress: () => {
-                                                setInputCode('');
-                                                setVerificationResult(null);
-                                            },
-                                        },
-                                        {
-                                            text: 'تسجيل طاكسي جديد',
-                                            onPress: handleRegisterNewTaxi, // Call the function to navigate when the button is pressed
-
-                                        },
-                                    ]);
-
-                                }
-                            },
-                            (_, error) => {
-                                console.log('Error verifying code:', error);
-                            }
-                        );
-                    }
+                'INSERT INTO code (code) VALUES (?)',
+                [parseInt(inputCode)],
+                (tx, results) => {
+                    console.log('Code inserted successfully');
                 },
-                (_, error) => {
-                    console.log('Error checking duplicate entry:', error);
+                (error) => {
+                    console.log('Insert code error', error);
                 }
             );
         });
-        Keyboard.dismiss();
     };
 
 
-
-    /* const sendTicketToServer = (ticketData) => {
-         fetch('http://41.226.178.8:5000/', {
-             method: 'POST',
-             headers: {
-                 'Content-Type': 'application/json'
-             },
-             body: JSON.stringify(ticketData)
-         })
-             .then(response => {
-                 // Handle the response from the server
-                 if (response.ok) {
-                     return response.json();
-                 }
-                 throw new Error('Error sending ticket to server');
-             })
-             .then(ticketData => {
-                 console.log('Ticket sent to server successfully');
-                 console.log(ticketData);
-             })
-             .catch(error => {
-                 // Handle the error
-                 console.log('Error sending ticket to server:', error);
-                  console.log(ticketData);
-             });
-     };*/
     const sendTicketToServer = (ticketData) => {
         fetch('http://41.226.178.8:5000/', {
             method: 'POST',
@@ -419,18 +420,6 @@ const SignIn = () => {
             });
     };
 
-
-
-    /* const saveTicketToLocalDatabase = (ticketData) => {
-       db.transaction((tx) => {
-           tx.executeSql(
-               'INSERT INTO offline_tickets (counter, actualDate, currentTime, inputCode) VALUES (?, ?, ?, ?)',
-               [ticketData.counter, ticketData.actualDate, ticketData.currentTime, ticketData.inputCode],
-               () => console.log('Ticket saved to local database'),
-               (_, error) => console.log('Error saving ticket to local database:', error)
-           );
-       });
-   };*/
     const saveTicketToLocalDatabase = (ticketData) => {
         // Perform the database insertion after the GET request is successful
         db.transaction((tx) => {
@@ -450,7 +439,7 @@ const SignIn = () => {
         });
     };
 
-   /* const sendDataToMongoDB = async (data) => {
+    const sendDataToMongoDB = async (data) => {
         try {
             const response = await fetch('http://41.226.178.8:5000/SendData', {
                 method: 'POST',
@@ -467,7 +456,7 @@ const SignIn = () => {
         } catch (error) {
             console.error('Error sending data to MongoDB', error);
         }
-    };*/
+    };
 
 
 
@@ -477,36 +466,40 @@ const SignIn = () => {
         const htmlContent = `<html>
         <head>
         </head>
-        <body>
-        <table width=100% style="font-size: 20px;font-weight: bold;" >
+        <body >
+        <table width=50px style="font-size: 18px;font-weight: bold;" >
         <thead>
-        <tr style="white-space: nowrap;">
-            <th colspan="2" style="font-size: 20px;">EPE-TVE N° ${counter}</th>
-        </tr>
+        
         <tr>
             <th colspan="2" style="font-size: 20px;">المؤسسة العمومية الاقتصادية لنقل المسافرين بالشرق</th>
         </tr>
         <tr>
-            <th colspan="2" style="font-size: 20px;">حقوق الدخول لسيارات الاجرة</th>
+            <th colspan="2" style="font-size: 20px;">مركز الفحص التقني سطيف</th>
+        </tr> 
+        <tr style="white-space: nowrap;">
+            <th colspan="2" style="font-size: 18px;">TICKET N° ${counter}</th>
         </tr>
                 
         </thead>
 
         <tbody>
-        <tr style="white-space: nowrap;font-size: 20px;">
+        <tr style="white-space: nowrap;font-size: 16px;">
             <td>${actualDate}</td>
             <td>${currentTime}</td>
         </tr>
-        <tr style="white-space: nowrap;font-size: 20px;">
+        <tr style="font-size: 15px;">
             
-            <td>د.ج 50 </td>
-            <td>: الثمن</td>
+            
+        <td>Prix : </td>
+        <td>500.00 DA</td>  
         </tr>
-        <tr style="font-size: 20px;">
-            
+
+        <tr style="font-size: 16px;">
+                        
+            <td>Matricule : </td>
             <td>${inputCode}</td>
-            <td>:الطاكسي</td>
-        </tr>
+            
+            </tr>
 
 
         </tbody>
@@ -516,15 +509,20 @@ const SignIn = () => {
           
         </body>
       </html>`;
+        // const encodedHtmlContent = utf8.encode(htmlContent);
         RNPrint.print({ html: htmlContent });
         setInputCode(null);
         setVerificationResult(null);
+        setSelectedButtonIndex(-1); // Reset selectedButtonIndex to indicate no button is selected
 
         const ticketData = {
             counter: counter,
             actualDate: actualDate,
             currentTime: currentTime,
-            inputCode: inputCode
+            numeroTaxi: inputCode,
+            Price: selectedButtonPrice,
+            matricule: userMatricule,
+            name: userName
         };
 
         const isConnected = await checkInternetConnection();
@@ -544,9 +542,9 @@ const SignIn = () => {
         setPrintedTickets((prevTickets) => prevTickets + 1);
         setShowButton(true); // show the button again
 
-
     };
 
+    const total = printedTickets * 50;
 
     //UI
     return (
@@ -560,68 +558,106 @@ const SignIn = () => {
                         <>
                             <Header />
                             <View style={styles.container}>
+
                                 <View>
-                                    <LottieView
-                                        source={require('../lotties/taxi.json')}
-                                        autoPlay
-                                        loop
-                                        style={{ width: 200, height: 200 }}
-                                    />
+
+                                    {/*     <View containerStyle={{
+                                        width: '10%',
+                                        height: '80%',
+                                        marginHorizontal: 50,
+                                        marginVertical: 50,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        flexWrap: 'wrap',
+                                    }}>
+                                        {buttons.map((button, index) => (
+                                            <View style={{ width: '50%', marginBottom: 10 }} key={index}>
+                                                <TouchableOpacity
+                                                    key={index}
+                                                    style={[styles.btn, { backgroundColor: button.color },
+
+                                                    ]}
+                                                    onPress={() => handleButtonPress(index)}
+                                                >
+                                                    <Text style={styles.buttonText}>{button.text}</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>*/}
+
                                 </View>
-                                <Text style={styles.label}>رقم الطاكسي: </Text>
-                                <TextInput
-                                    value={inputCode}
-                                    onChangeText={setInputCode}
-                                    //secureTextEntry={true}
-                                    keyboardType="numeric"
-                                    placeholder=" "
-                                    style={styles.input}
-                                />
-
-
-                                {verificationResult === 'not_matched' && (
-                                    <Text style={styles.error}>الرقم غير موجود</Text>
-                                )}
-                                { /* {verificationResult === 'matched' && (
-                                    <Text style={styles.correct}>الرقم موجود</Text>
-                              )}*/}
-
-
-                                {showButton && <Button title="اثبات" onPress={verifyCode} />}
-                            </View>
-
-                            {/*Display the button print if the code matches */}
-
-                            {verificationResult === 'matched' && (
-                                <View style={styles.buttonContainer}>
-                                    <View style={[styles.button, { margin: 15 }]}>
-                                        <Button title="طبع" onPress={printData} />
+                                <View style={styles.container}>
+                                    <View style={styles.redBox}>
+                                        <Text style={styles.box}>المجموع : {total}.00 د.ج </Text>
+                                        <Text style={styles.box}>عدد التذاكر : {printedTickets}</Text>
                                     </View>
 
                                 </View>
-                            )}
+                                <>
+
+                                    <Text style={styles.label}> Immatriculation : </Text>
+                                    <TextInput
+                                        value={inputCode}
+                                        onChangeText={setInputCode}
+                                        //secureTextEntry={true}
+                                        keyboardType="numeric"
+                                        placeholder=" "
+                                        maxLength={10}
+                                        style={[styles.input, { fontSize: 40 }]}
+                                    />
+
+                                    {verificationResult === 'not_matched' && (
+                                        <Text style={styles.error}>الرقم غير موجود</Text>
+                                    )}
+
+                                    {showButton && (
+                                        <View style={styles.btnContainer}>
+                                            <TouchableOpacity onPress={printData}>
+                                                <FontAwesomeIcon
+                                                    icon={faPrint}
+                                                    beatFade
+                                                    color="#FF5733"
+                                                    size={50}
+                                                />
+                                            </TouchableOpacity>
+
+                                        </View>
+
+                                    )}
+
+                                    {/* <Button title="Logout" onPress={handleLogout} /> */}
+                                    <View style={styles.exit}>
+                                        <TouchableOpacity onPress={handleLogout}>
+                                            <FontAwesomeIcon
+                                                icon={faRightFromBracket}
+                                                color="black"
+                                                size={30}
+                                            />
+                                            <Text style={styles.text}>نهاية العمل</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </>
+
+                            </View>
+
+
+
 
                         </>
-                        {/* <Button title="Logout" onPress={handleLogout} /> */}
-                        <View style={styles.exit}>
-                            <TouchableOpacity onPress={handleLogout}>
-                                <FontAwesomeIcon
-                                    icon={faRightFromBracket}
-                                    color="#000"
-                                    size={30}
-                                />
-                                <Text style={styles.text}>نهاية العمل</Text>
-                            </TouchableOpacity>
-                        </View>
+
+
                     </View>
 
                 ) : (
                     <LogIn onLoginStatus={handleLoginStatus} onUserName={handleUserName} onLoginDate={handleLoginDate} onUserMatricule={handleUserMatricule} />
                 )}
+
             </View>
         </ScrollView>
     );
 };
+const { width } = Dimensions.get('window');
 
 //Styles
 const styles = StyleSheet.create({
@@ -640,16 +676,30 @@ const styles = StyleSheet.create({
         }
     },
     buttonContainer: {
-        marginHorizontal: 100,
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+        // flexWrap: 'wrap',
+        //justifyContent: 'space-between',
+        // width: '100%', // Adjust the width as needed
+        paddingHorizontal: 20, // Adjust the horizontal padding as needed
+        marginTop: 50, // Adjust the top margin as needed
+        position: 'relative',
     },
     button: {
         flex: 1,
+        height: 60,
+        alignItems: 'center', // Center text horizontally
+        justifyContent: 'center', // Center text vertically
+
+    },
+    redBox: {
+        borderWidth: 2,
+        borderColor: 'red',
+        padding: 10,
+        borderRadius: 5,
+        marginTop: 10,
     },
     container: {
-        //flex: 1,
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         padding: 45,
@@ -657,24 +707,28 @@ const styles = StyleSheet.create({
 
     },
     exit: {
-        //flex: 1,
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         padding: 20,
-        //marginTop: 5,
+        marginTop: 5,
+
 
     },
     label: {
-        fontSize: 18,
+        fontSize: 30,
         marginBottom: 8,
         color: '#000',
-
+        fontWeight: 'bold',
+    },
+    box: {
+        fontSize: 18,
     },
     input: {
-        height: 40,
+        height: '25%',
         width: '100%',
         borderColor: 'gray',
-        borderWidth: 1,
+        borderWidth: 2,
         marginBottom: 16,
         paddingHorizontal: 8,
     },
@@ -689,11 +743,48 @@ const styles = StyleSheet.create({
 
     },
     text: {
-        fontSize: 15,
-        marginBottom: 8,
-        color: '#000',
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: 'black',
+        marginTop: 5, // Adjust the top margin as needed
+    },
+    btn: {
+        flexBasis: width >= 768 ? '30%' : '48%', // Adjust the percentage as needed
+        height: '120%', // Change the height as desired
+        marginHorizontal: 10, // Adjust the horizontal margin to add space between buttons
+        borderRadius: 5, // Add border radius if you want rounded corners
+        alignItems: 'center',
+        justifyContent: 'center',
+        // Add any other styles you want to apply to your buttons
+    },
+    buttonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 20,
+
 
     },
+    btnText: {
+        color: '#FF5733',
+        fontWeight: 'bold',
+        fontSize: 20,
+    },
+    btnContainer: {
+        width: '100%',
+        marginTop: 20,
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        // padding: 20,
+
+    },
+
+    printer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
 });
 
 export default SignIn;

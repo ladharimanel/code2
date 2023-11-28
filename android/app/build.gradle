@@ -93,13 +93,13 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.code"
+    namespace "com.busoftware.taxi"
     defaultConfig {
-        applicationId "com.code"
+        applicationId "com.busoftware.taxi"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 15
+        versionName "15.0"
     }
 
     splits {

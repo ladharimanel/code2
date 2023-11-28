@@ -1,4 +1,4 @@
-package com.code;
+package com.busoftware.taxi;
 
 import com.facebook.react.ReactActivity;
 import com.facebook.react.ReactActivityDelegate;

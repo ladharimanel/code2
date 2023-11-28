@@ -1,4 +1,4 @@
-package com.code;
+package com.busoftware.taxi;
 
 import android.app.Application;
 import com.facebook.react.PackageList;
