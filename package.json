@@ -38,6 +38,7 @@
     "react-native-sqlite-2": "^3.6.2",
     "react-native-sqlite-storage": "^6.0.1",
     "react-native-svg": "^13.9.0",
+    "react-native-toast-message": "^2.2.0",
     "react-native-webview": "^13.6.0",
     "utf8": "^3.0.0"
   },

@@ -13,6 +13,8 @@ import * as permissions from 'react-native-permissions';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 import utf8 from 'utf8';
 import Logo from '../images/logoicon.png';
+import Toast from 'react-native-toast-message';
+
 
 
 
@@ -32,6 +34,58 @@ const SignIn = () => {
     const [isButtonPressed, setIsButtonPressed] = useState(false);
     const [selectedButtonPrice, setSelectedButtonPrice] = useState(null); // No default price
     const [totalPrice, setTotalPrice] = useState(0);
+
+
+    /*  useEffect(() => {
+          const storedYear = parseInt(Login.substring(0, 4)); // Extract the year from the login date
+          const currentYear = new Date().getFullYear();
+  
+          if (currentYear !== storedYear) {
+              const initialCounter = currentYear * 100000 + 1;
+              setCounter(initialCounter);
+              updateCounterInDatabase(initialCounter); // Update the counter value in the database for the new year
+          } else {
+              // Counter value remains the same if it's still the same year
+              setCounter(getInitialCounter());
+          }
+  
+          const createTable = () => {
+              db.transaction((tx) => {
+                  tx.executeSql(
+                      'CREATE TABLE IF NOT EXISTS counter (value INTEGER PRIMARY KEY)'
+                  );
+                  console.log('Counter table created successfully');
+  
+                  // Check if counter value exists in the database
+                  tx.executeSql(
+                      'SELECT value FROM counter',
+                      [],
+                      (_, result) => {
+                          if (result.rows.length === 0) {
+                              // If no counter value exists, insert the initial value
+                              tx.executeSql(
+                                  'INSERT INTO counter (value) VALUES (?)',
+                                  [initialCounter],
+                                  () => console.log('Counter value inserted into the database'),
+                                  (_, error) => console.log('Error inserting counter value:', error)
+                              );
+                          } else {
+                              // If counter value exists, update the state with the saved value
+                              const savedCounter = result.rows.item(0).value;
+                              setCounter(savedCounter);
+                          }
+                      },
+                      (_, error) => console.log('Error retrieving counter value:', error)
+                  );
+              });
+          };
+  
+          // Call the createTable function
+          createTable();
+          createTable2();
+          offline();
+      }, []);*/
+
 
 
     // Update the user's name when logging in
@@ -131,7 +185,7 @@ const SignIn = () => {
     const handleLogout = () => {
         const totalPrice = printedTickets * 500;
         //DT= dernier ticket 
-        const DT = counter - 1 ;
+        const DT = counter - 1;
         //PT= premier ticket
         const PT = counter - printedTickets;
         const printContent = `<html>
@@ -181,10 +235,10 @@ const SignIn = () => {
         <td colspan="2">${totalPrice}.00 D.A</td>
     </tr>
     <tr style="white-space: nowrap;font-size: 18px;">
-    <th colspan="2">Premier ticket:  ${PT}</th>
+    <th colspan="2">Premier tk:  ${PT}</th>
 </tr>
     <tr style="white-space: nowrap;font-size: 18px;">
-    <th colspan="2">Dernier ticket:  ${DT}</th>
+    <th colspan="2">Dernier tk:  ${DT}</th>
 </tr>
        
        <!-- <tr style="font-size: 18px;"> 
@@ -223,10 +277,60 @@ const SignIn = () => {
 
 
     // Update the counter value when the year changes
+    /*  useEffect(() => {
+          const currentYear = new Date().getFullYear();
+          const initialCounter = currentYear * 100000 + 1;
+          setCounter(initialCounter);
+  
+          const createTable = () => {
+              db.transaction((tx) => {
+                  tx.executeSql(
+                      'CREATE TABLE IF NOT EXISTS counter (value INTEGER PRIMARY KEY)'
+                  );
+                  console.log('Counter table created successfully');
+  
+                  // Check if counter value exists in the database
+                  tx.executeSql(
+                      'SELECT value FROM counter',
+                      [],
+                      (_, result) => {
+                          if (result.rows.length === 0) {
+                              // If no counter value exists, insert the initial value
+                              tx.executeSql(
+                                  'INSERT INTO counter (value) VALUES (?)',
+                                  [initialCounter],
+                                  () => console.log('Counter value inserted into the database'),
+                                  (_, error) => console.log('Error inserting counter value:', error)
+                              );
+                          } else {
+                              // If counter value exists, update the state with the saved value
+                              const savedCounter = result.rows.item(0).value;
+                              setCounter(savedCounter);
+                          }
+                      },
+                      (_, error) => console.log('Error retrieving counter value:', error)
+                  );
+              });
+          };
+  
+          // Call the createTable function
+          createTable();
+          createTable2();
+          offline();
+      }, []);*/
     useEffect(() => {
+        const storedYear = parseInt(Login.substring(0, 4)); // Extract the year from the login date
         const currentYear = new Date().getFullYear();
-        const initialCounter = currentYear * 100000 + 1;
-        setCounter(initialCounter);
+
+        if (currentYear !== storedYear) {
+            const initialCounter = currentYear * 100000 + 1;
+            setCounter(initialCounter);
+            updateCounterInDatabase(initialCounter); // Update the counter value in the database for the new year
+        } else {
+            // Counter value remains the same if it's still the same year
+           
+            setCounter(getInitialCounter());
+        }
 
         const createTable = () => {
             db.transaction((tx) => {
@@ -463,6 +567,23 @@ const SignIn = () => {
 
     // Print the entered data and icrement counter
     const printData = async () => {
+        const currentDate = new Date().toLocaleDateString();
+        const storedMatricules = await AsyncStorage.getItem('printedMatricules');
+        const parsedMatricules = storedMatricules ? JSON.parse(storedMatricules) : [];
+
+        if (parsedMatricules.includes(inputCode) && parsedMatricules.includes(currentDate)) {
+            // Matricule has been entered before on the same day
+            console.log('Matricule already entered today. Cannot print another ticket.');
+            //showMatriculeEnteredToast();
+            return;
+        }
+
+        // Matricule is valid for printing
+        parsedMatricules.push(inputCode);
+        parsedMatricules.push(currentDate);
+
+        await AsyncStorage.setItem('printedMatricules', JSON.stringify(parsedMatricules));
+
         const htmlContent = `<html>
         <head>
         </head>
@@ -560,31 +681,6 @@ const SignIn = () => {
                             <View style={styles.container}>
 
                                 <View>
-
-                                    {/*     <View containerStyle={{
-                                        width: '10%',
-                                        height: '80%',
-                                        marginHorizontal: 50,
-                                        marginVertical: 50,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        flexWrap: 'wrap',
-                                    }}>
-                                        {buttons.map((button, index) => (
-                                            <View style={{ width: '50%', marginBottom: 10 }} key={index}>
-                                                <TouchableOpacity
-                                                    key={index}
-                                                    style={[styles.btn, { backgroundColor: button.color },
-
-                                                    ]}
-                                                    onPress={() => handleButtonPress(index)}
-                                                >
-                                                    <Text style={styles.buttonText}>{button.text}</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        ))}
-                                    </View>*/}
 
                                 </View>
                                 <View style={styles.container}>
